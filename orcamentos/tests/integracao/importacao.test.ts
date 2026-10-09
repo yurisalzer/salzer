@@ -34,7 +34,9 @@ async function zipar(arquivos: Array<{ nome: string; conteudo: Buffer }>): Promi
   return z.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
 
-async function analisarEmop(extra: Partial<Parameters<typeof analisarImportacao>[0]> = {}, arquivos = EMOP.map((n) => ({ origem: path.join(EMOP_DIR, n), nome: n }))) {
+type Envio = { origem?: string; nome: string; conteudo?: Buffer };
+
+async function analisarEmop(extra: Partial<Parameters<typeof analisarImportacao>[0]> = {}, arquivos: Envio[] = EMOP.map((n) => ({ origem: path.join(EMOP_DIR, n), nome: n }))) {
   const { dir, enviados } = await enviar(arquivos);
   return analisarImportacao({ fonte: "EMOP", uf: "RJ", competencia: JAN, regimes: ["SEM_DESONERACAO", "COM_DESONERACAO"], usuarioId: null, dir, enviados, ...extra });
 }
@@ -190,7 +192,7 @@ describe.skipIf(!temBanco)("importação SINAPI (amostra real de jan/2026, Retif
   afterAll(() => prisma.$disconnect());
 
   async function analisarSinapi(nomeZip = "SINAPI-2026-01-formato-xlsx_Retificacao01.zip", principal?: Buffer, regimes = TODOS_SINAPI, rotulo?: string) {
-    const conteudos = await Promise.all(SINAPI.map(async (n) => ({ nome: `SINAPI-2026-01-formato-xlsx/${n}`, conteudo: await readFile(path.join(SINAPI_DIR, n)) })));
+    const conteudos: Array<{ nome: string; conteudo: Buffer }> = await Promise.all(SINAPI.map(async (n) => ({ nome: `SINAPI-2026-01-formato-xlsx/${n}`, conteudo: await readFile(path.join(SINAPI_DIR, n)) })));
     if (principal) conteudos[0]!.conteudo = principal;
     const { dir, enviados } = await enviar([{ nome: nomeZip, conteudo: await zipar(conteudos) }]);
     return analisarImportacao({ fonte: "SINAPI", uf: "RJ", competencia: JAN, regimes, rotuloRevisao: rotulo, usuarioId: null, dir, enviados });
