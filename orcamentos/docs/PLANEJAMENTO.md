@@ -11,6 +11,21 @@ Ele foi escrito depois de inspecionar os arquivos oficiais reais enviados:
 As conclusões sobre layouts **não são suposições**: foram verificadas registro a registro nesses arquivos
 (ver seção 4 e `docs/LAYOUTS_OFICIAIS.md`).
 
+## Situação da implementação (outubro/2026)
+
+As 6 etapas foram implementadas e validadas com testes automatizados (unitários e de integração com
+PostgreSQL) e com os arquivos oficiais completos de jan/2026, importados pelo navegador numa simulação fiel
+da imagem de produção. Ajustes em relação ao plano abaixo, decididos durante a implementação:
+
+- `revisoes_base` não tem status `RASCUNHO`: o lote fica no staging até a confirmação; a revisão nasce
+  `VALIDADA`. Revisão rejeitada tem seus preços apagados para liberar espaço (o relatório do lote fica).
+- Chave de `precos_referencia` = (item, revisão, regime): um só índice atende busca e histórico.
+- Tabela extra de staging `stg_atributos` (% de mão de obra do SINAPI).
+- Primeiro administrador e dados iniciais criados automaticamente na inicialização (variáveis
+  `ADMIN_*`), para dispensar o uso de terminal.
+- Hospedagem recomendada confirmada: Render (Docker) + Neon; memória medida em produção simulada:
+  pico de ~360 MB na importação completa EMOP + SINAPI.
+
 ---
 
 ## 1. Arquitetura recomendada

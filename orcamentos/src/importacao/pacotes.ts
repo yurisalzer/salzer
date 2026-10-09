@@ -6,7 +6,7 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createExtractorFromFile } from "node-unrar-js";
 import { detectarAssinatura, type Assinatura } from "./assinatura";
-import { ArquivoZip } from "./zip";
+import { ArquivoZip, LIMITE_DESCOMPACTADO_POR_ENTRADA } from "./zip";
 
 /** Extensões de dados extraídas de pacotes; os demais conteúdos (PDF, DOCX…) só são listados. */
 const EXTENSOES_DADOS = new Set([".dbf", ".xls", ".xlsx"]);
@@ -91,6 +91,10 @@ export async function prepararArquivos(dir: string, enviados: Array<{ nomeOrigin
       });
       const lista = [...extrator.getFileList().fileHeaders];
       if (lista.length > LIMITE_ARQUIVOS_PACOTE) throw new Error(`Pacote com arquivos demais (${lista.length})`);
+      const totalDados = lista.filter((h) => !h.flags.directory && EXTENSOES_DADOS.has(path.extname(h.name).toLowerCase())).reduce((t, h) => t + h.unpSize, 0);
+      if (lista.some((h) => h.unpSize > LIMITE_DESCOMPACTADO_POR_ENTRADA) || totalDados > 2 * LIMITE_DESCOMPACTADO_POR_ENTRADA) {
+        throw new Error("Pacote RAR com arquivos descompactados grandes demais.");
+      }
       for (const h of lista) {
         if (h.flags.directory) continue;
         if (!EXTENSOES_DADOS.has(path.extname(h.name).toLowerCase())) {

@@ -1,0 +1,33 @@
+name: Orçamentos — backup do banco
+
+# Backup semanal (domingo, 06:17 UTC) e sob demanda (aba Actions > Run workflow).
+# Segredos necessários (Settings > Secrets and variables > Actions):
+#   BACKUP_DATABASE_URL  connection string DIRETA do Neon (sem "-pooler")
+#   BACKUP_SENHA         senha longa usada para cifrar o arquivo (guarde-a fora do GitHub!)
+on:
+  schedule:
+    - cron: "17 6 * * 0"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update && sudo apt-get install -y postgresql-client-17
+      - name: Gerar backup cifrado
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_SENHA: ${{ secrets.BACKUP_SENHA }}
+          PG_DUMP: /usr/lib/postgresql/17/bin/pg_dump
+        run: bash orcamentos/scripts/backup.sh backups
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-orcamentos-${{ github.run_number }}
+          path: backups/*.gpg
+          retention-days: 90

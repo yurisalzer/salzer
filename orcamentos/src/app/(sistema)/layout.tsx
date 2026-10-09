@@ -33,7 +33,8 @@ export default async function LayoutSistema({ children }: { children: React.Reac
         <div className="hidden border-t border-marca-700 px-4 py-3 text-xs md:block">
           <div className="font-medium text-white">{u.nome}</div>
           <div className="truncate text-marca-100">{u.email}</div>
-          <form action={acaoSair} className="mt-2">
+          <Link href="/conta" className="mt-2 block text-marca-100 underline hover:text-white">Minha conta</Link>
+          <form action={acaoSair} className="mt-1">
             <button className="text-marca-100 underline hover:text-white" type="submit">Sair</button>
           </form>
         </div>

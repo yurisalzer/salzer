@@ -1,0 +1,26 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+# No painel do Render: New > Blueprint > escolha este repositório. Preencha as variáveis marcadas.
+services:
+  - type: web
+    name: orcamentos-obras
+    runtime: docker
+    rootDir: orcamentos
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/saude
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Neon: connection string COM "-pooler" no endereço
+      - key: DIRECT_URL
+        sync: false # Neon: connection string SEM "-pooler" (migrações)
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_NOME
+        sync: false
+      - key: ADMIN_SENHA_INICIAL
+        sync: false # remova depois do primeiro acesso
+      - key: UPLOAD_MAX_MB
+        value: "200"
+      - key: LIMITE_BANCO_MB
+        value: "512"

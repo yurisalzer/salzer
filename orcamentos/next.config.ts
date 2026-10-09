@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Bibliotecas com binários nativos ou WebAssembly ficam fora do bundle do servidor.
   serverExternalPackages: ["@node-rs/argon2", "node-unrar-js", "pdfmake", "exceljs"],
+  // Arquivos carregados em tempo de execução que o rastreamento automático não detecta
+  outputFileTracingIncludes: {
+    "/api/importacoes": ["./node_modules/node-unrar-js/dist/js/unrar.wasm"],
+    "/api/relatorios/[tipo]": ["./node_modules/pdfmake/build/vfs_fonts.js", "./node_modules/generator-function/**", "./node_modules/async-function/**"],
+  },
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
   },
