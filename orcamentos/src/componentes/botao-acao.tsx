@@ -15,7 +15,7 @@ export function BotaoAcao({
   rotulo: string;
   rotuloPendente?: string;
   classe?: string;
-  campos?: Record<string, string>;
+  campos?: Record<string, string | number>;
   confirmar?: string;
   children?: React.ReactNode;
   desabilitado?: boolean;
@@ -29,7 +29,7 @@ export function BotaoAcao({
       }}
       className="inline-flex flex-col gap-1"
     >
-      {Object.entries(campos).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+      {Object.entries(campos).map(([k, v]) => <input key={k} type="hidden" name={k} value={String(v)} />)}
       {children}
       <button type="submit" className={classe} disabled={pendente || desabilitado}>{pendente ? rotuloPendente ?? "Aguarde…" : rotulo}</button>
       {estado.erro && <span className="max-w-md text-xs text-red-700">{estado.erro}</span>}

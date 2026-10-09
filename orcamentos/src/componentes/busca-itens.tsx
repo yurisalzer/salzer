@@ -16,7 +16,7 @@ export interface ItemEncontrado {
 }
 
 /** Campo de busca de itens EMOP/SINAPI/próprios com resultados em lista. */
-export function BuscaItens({ revisoes, regime, proprios = true, aoEscolher }: { revisoes: string[]; regime: string; proprios?: boolean; aoEscolher: (i: ItemEncontrado) => void }) {
+export function BuscaItens({ revisoes, regime, regimes, proprios = true, aoEscolher }: { revisoes: string[]; regime: string; regimes?: string[]; proprios?: boolean; aoEscolher: (i: ItemEncontrado) => void }) {
   const [q, setQ] = useState("");
   const [itens, setItens] = useState<ItemEncontrado[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -30,13 +30,13 @@ export function BuscaItens({ revisoes, regime, proprios = true, aoEscolher }: { 
     }
     timer.current = setTimeout(async () => {
       setCarregando(true);
-      const p = new URLSearchParams({ q, regime, revisoes: revisoes.join(","), proprios: proprios ? "1" : "0" });
+      const p = new URLSearchParams({ q, regime, revisoes: revisoes.join(","), regimes: (regimes ?? []).join(","), proprios: proprios ? "1" : "0" });
       const r = await fetch(`/api/referencias/busca?${p}`);
       const j = await r.json().catch(() => ({ itens: [] }));
       setItens(j.itens ?? []);
       setCarregando(false);
     }, 300);
-  }, [q, regime, revisoes, proprios]);
+  }, [q, regime, regimes, revisoes, proprios]);
 
   return (
     <div>

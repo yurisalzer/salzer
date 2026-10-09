@@ -14,6 +14,7 @@ export async function GET(req: Request) {
       texto: u.searchParams.get("q") ?? "",
       revisoes,
       regime: u.searchParams.get("regime") ?? "SEM_DESONERACAO",
+      regimes: (u.searchParams.get("regimes") ?? "").split(",").filter(Boolean),
       tipo: tipo === "INSUMO" || tipo === "COMPOSICAO" ? tipo : undefined,
       incluirProprios: u.searchParams.get("proprios") === "1",
       limite: 30,

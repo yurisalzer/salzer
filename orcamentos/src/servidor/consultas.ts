@@ -47,6 +47,8 @@ export interface FiltroBusca {
   /** Revisões em que procurar (uma por fonte). Itens próprios entram se `incluirProprios`. */
   revisoes: string[];
   regime: string;
+  /** Opcional: regime por revisão (mesma ordem de `revisoes`); prevalece sobre `regime` */
+  regimes?: string[];
   tipo?: "INSUMO" | "COMPOSICAO";
   incluirProprios?: boolean;
   limite?: number;
@@ -64,7 +66,8 @@ function pareceCodigo(t: string): boolean {
  */
 export async function buscarItens(f: FiltroBusca, db: Tx = prisma): Promise<ItemBusca[]> {
   const texto = f.texto.trim().slice(0, 100);
-  const params: unknown[] = [f.revisoes, f.regime];
+  const regimes = f.regimes && f.regimes.length === f.revisoes.length ? f.regimes : f.revisoes.map(() => f.regime);
+  const params: unknown[] = [f.revisoes, regimes];
   const cond: string[] = [];
   if (texto) {
     if (pareceCodigo(texto)) {
@@ -101,7 +104,7 @@ export async function buscarItens(f: FiltroBusca, db: Tx = prisma): Promise<Item
         FROM precos_referencia p
         JOIN itens_referencia i ON i.id = p.item_id
         JOIN fontes fo ON fo.id = i.fonte_id
-       WHERE p.revisao_base_id = ANY($1::uuid[]) AND p.regime_codigo = $2 ${where}
+       WHERE (p.revisao_base_id, p.regime_codigo) IN (SELECT * FROM unnest($1::uuid[], $2::text[])) ${where}
       ${proprios}
     ) r
     ORDER BY r.fonte, r.codigo
