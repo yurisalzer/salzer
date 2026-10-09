@@ -284,9 +284,6 @@ model itens_referencia {
 
   @@unique([fonte_id, tipo, codigo])
   @@index([codigo], map: "idx_itens_codigo")
-  @@index([codigo(ops: raw("gin_trgm_ops"))], map: "idx_itens_codigo_trgm", type: Gin)
-  @@index([fonte_id, codigo], map: "idx_itens_fonte_codigo")
-  @@index([fonte_id, regime_codigo], map: "idx_itens_regime")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -441,8 +438,7 @@ model precos_referencia {
   regimes             regimes          @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
   revisoes_base       revisoes_base    @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@id([revisao_base_id, regime_codigo, item_id])
-  @@index([item_id, revisao_base_id], map: "idx_precos_item")
+  @@id([item_id, revisao_base_id, regime_codigo])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -690,4 +686,19 @@ model verificacoes_importacao {
   lotes_importacao lotes_importacao @relation(fields: [lote_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([lote_id, severidade], map: "idx_verificacoes_lote")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_atributos {
+  lote_id       String   @db.Uuid
+  arquivo       String
+  linha         Int
+  regime_codigo String
+  tipo          String
+  codigo        String
+  atributo      String
+  valor         Decimal? @db.Decimal(20, 8)
+
+  @@index([lote_id, atributo, tipo, codigo], map: "idx_stg_atributos_lote")
+  @@ignore
 }

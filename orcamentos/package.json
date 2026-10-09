@@ -44,6 +44,7 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@types/yauzl": "^2.10.3",
+    "jszip": "^3.10.1",
     "postcss": "^8.5.29",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.1.13",

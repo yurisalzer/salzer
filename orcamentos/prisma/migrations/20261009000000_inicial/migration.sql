@@ -250,6 +250,19 @@ CREATE UNLOGGED TABLE stg_composicoes (
 );
 CREATE INDEX idx_stg_composicoes_lote ON stg_composicoes(lote_id, codigo);
 
+-- Atributos complementares por item e regime (ex.: % de mão de obra do SINAPI)
+CREATE UNLOGGED TABLE stg_atributos (
+  lote_id       uuid NOT NULL,
+  arquivo       text NOT NULL,
+  linha         integer NOT NULL,
+  regime_codigo text NOT NULL,
+  tipo          text NOT NULL,
+  codigo        text NOT NULL,
+  atributo      text NOT NULL,
+  valor         numeric(20, 8)
+);
+CREATE INDEX idx_stg_atributos_lote ON stg_atributos(lote_id, atributo, tipo, codigo);
+
 CREATE UNLOGGED TABLE stg_manutencoes (
   lote_id     uuid NOT NULL,
   linha       integer NOT NULL,
@@ -280,11 +293,9 @@ CREATE TABLE itens_referencia (
   atualizado_em               timestamptz NOT NULL DEFAULT now(),
   UNIQUE (fonte_id, tipo, codigo)
 );
+-- Busca por código (prefixo) e por palavras da descrição (trigramas, sem acento).
 CREATE INDEX idx_itens_codigo ON itens_referencia(codigo text_pattern_ops);
-CREATE INDEX idx_itens_fonte_codigo ON itens_referencia(fonte_id, codigo text_pattern_ops);
 CREATE INDEX idx_itens_descricao_trgm ON itens_referencia USING gin (f_normalizar_busca(descricao) gin_trgm_ops);
-CREATE INDEX idx_itens_codigo_trgm ON itens_referencia USING gin (codigo gin_trgm_ops);
-CREATE INDEX idx_itens_regime ON itens_referencia(fonte_id, regime_codigo);
 
 CREATE TABLE descricoes_item (
   id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -307,12 +318,13 @@ CREATE TABLE precos_referencia (
   percentual_as       numeric(12, 8),
   percentual_mao_obra numeric(12, 8),
   linha_origem        integer,
-  PRIMARY KEY (revisao_base_id, regime_codigo, item_id),
+  -- Ordem da chave: atende a busca de preço de um item numa revisão E o histórico do item
+  -- com um único índice (economia de espaço).
+  PRIMARY KEY (item_id, revisao_base_id, regime_codigo),
   -- Preço ausente nunca é gravado como zero: só INFORMADO tem valor.
   CHECK ((situacao = 'INFORMADO') = (preco IS NOT NULL)),
   CHECK (preco IS NULL OR preco >= 0)
 );
-CREATE INDEX idx_precos_item ON precos_referencia(item_id, revisao_base_id);
 
 CREATE TABLE composicoes (
   id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),

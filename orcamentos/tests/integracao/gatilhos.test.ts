@@ -34,7 +34,7 @@ describe.skipIf(!temBanco)("gatilhos de integridade do banco", () => {
     await prisma.revisoes_base.update({ where: { id: rev.id }, data: { status: "PUBLICADA", publicada_em: new Date() } });
     await expect(
       prisma.precos_referencia.update({
-        where: { revisao_base_id_regime_codigo_item_id: { revisao_base_id: rev.id, regime_codigo: "SEM_DESONERACAO", item_id: item.id } },
+        where: { item_id_revisao_base_id_regime_codigo: { revisao_base_id: rev.id, regime_codigo: "SEM_DESONERACAO", item_id: item.id } },
         data: { preco: "11" },
       }),
     ).rejects.toThrow(/publicada não pode ser alterada/);
