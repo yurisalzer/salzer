@@ -1,0 +1,54 @@
+{
+  "name": "orcamentos-obras",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema web de orçamento de obras — EMOP-RJ e SINAPI-RJ",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build && node scripts/copiar-estaticos.mjs",
+    "start": "node .next/standalone/server.js",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integracao": "vitest run tests/integracao",
+    "db:migrar": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "importar": "tsx scripts/importar.ts",
+    "usuario:criar": "tsx scripts/criar-usuario.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/client": "^6.19.3",
+    "busboy": "^1.6.0",
+    "decimal.js": "^10.6.0",
+    "exceljs": "^4.4.0",
+    "iconv-lite": "^0.7.0",
+    "next": "^15.5.27",
+    "node-unrar-js": "^2.0.2",
+    "pdfmake": "^0.2.20",
+    "react": "^19.1.9",
+    "react-dom": "^19.1.9",
+    "saxes": "^6.0.0",
+    "server-only": "^0.0.1",
+    "yauzl": "^3.4.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/busboy": "^1.5.4",
+    "@types/node": "^22.18.0",
+    "@types/pdfmake": "^0.2.11",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/yauzl": "^2.10.3",
+    "postcss": "^8.5.29",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4.1.13",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "3.2.7"
+  }
+}

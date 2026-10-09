@@ -1,0 +1,693 @@
+// ATENÇÃO: este arquivo é gerado por `prisma db pull` a partir das migrações SQL
+// (prisma/migrations/*/migration.sql), que são a fonte da verdade do modelo.
+// Para alterar o banco: crie uma nova migração SQL, aplique com `npm run db:migrar`
+// e rode `npx prisma db pull`. NÃO use `prisma migrate dev`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model arquivos_importacao {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lote_id          String           @db.Uuid
+  nome             String
+  caminho          String
+  pacote_sha256    String?
+  tamanho          BigInt
+  sha256           String
+  assinatura       String
+  layout           String?
+  papel            String?
+  registros        Int?
+  criado_em        DateTime         @default(now()) @db.Timestamptz(6)
+  lotes_importacao lotes_importacao @relation(fields: [lote_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lote_id], map: "idx_arquivos_lote")
+  @@index([sha256], map: "idx_arquivos_sha")
+}
+
+model auditoria {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id  String?   @db.Uuid
+  acao        String
+  entidade    String
+  entidade_id String?   @db.Uuid
+  dados       Json      @default("{}")
+  ip          String?
+  criado_em   DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@index([criado_em(sort: Desc)], map: "idx_auditoria_data")
+  @@index([entidade, entidade_id], map: "idx_auditoria_entidade")
+  @@index([usuario_id, criado_em(sort: Desc)], map: "idx_auditoria_usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bases_referencia {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonte_id      String          @db.Uuid
+  uf            String          @db.Char(2)
+  competencia   DateTime        @db.Date
+  criado_em     DateTime        @default(now()) @db.Timestamptz(6)
+  fontes        fontes          @relation(fields: [fonte_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base revisoes_base[]
+
+  @@unique([fonte_id, uf, competencia])
+  @@index([competencia(sort: Desc)], map: "idx_bases_competencia")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bdi_aplicados {
+  id                            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  revisao_id                    String               @db.Uuid
+  perfil_origem_id              String?              @db.Uuid
+  nome                          String
+  parcelas                      Json                 @default("[]")
+  percentual_calculado          Decimal?             @db.Decimal(12, 6)
+  percentual_adotado            Decimal              @db.Decimal(12, 6)
+  criado_em                     DateTime             @default(now()) @db.Timestamptz(6)
+  perfis_bdi                    perfis_bdi?          @relation(fields: [perfil_origem_id], references: [id], onUpdate: NoAction)
+  revisao                       revisoes_orcamento   @relation("bdi_aplicados_revisao_idTorevisoes_orcamento", fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens_orcamento               itens_orcamento[]
+  revisoes_que_usam_como_padrao revisoes_orcamento[] @relation("revisoes_orcamento_bdi_padrao_idTobdi_aplicados")
+
+  @@index([revisao_id], map: "idx_bdi_aplicados_revisao")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model composicao_itens {
+  composicao_id            String            @db.Uuid
+  ordem                    Int
+  sequencia                String?
+  tipo_item                String
+  item_id                  String?           @db.Uuid
+  codigo_original          String
+  coeficiente              Decimal           @db.Decimal(24, 10)
+  percentual_perda         Decimal?          @db.Decimal(12, 8)
+  situacao_origem          String?
+  revisao_base_id          String?           @db.Uuid
+  regime_codigo            String?
+  custo_unitario_informado Decimal?          @db.Decimal(20, 6)
+  descricao_informada      String?
+  unidade_informada        String?
+  composicoes              composicoes       @relation(fields: [composicao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens_referencia         itens_referencia? @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  regimes                  regimes?          @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base            revisoes_base?    @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([composicao_id, ordem])
+  @@index([item_id], map: "idx_composicao_itens_item")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model composicoes {
+  id                       String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  item_id                  String                   @db.Uuid
+  origem                   String
+  hash_conteudo            String
+  versao                   Int                      @default(1)
+  primeira_revisao_base_id String?                  @db.Uuid
+  observacao               String?
+  criada_por               String?                  @db.Uuid
+  criada_em                DateTime                 @default(now()) @db.Timestamptz(6)
+  composicao_itens         composicao_itens[]
+  usuarios                 usuarios?                @relation(fields: [criada_por], references: [id], onUpdate: NoAction)
+  itens_referencia         itens_referencia         @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base            revisoes_base?           @relation(fields: [primeira_revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  composicoes_publicadas   composicoes_publicadas[]
+  itens_orcamento          itens_orcamento[]
+
+  @@unique([item_id, hash_conteudo])
+}
+
+model composicoes_publicadas {
+  revisao_base_id  String           @db.Uuid
+  item_id          String           @db.Uuid
+  composicao_id    String           @db.Uuid
+  situacao         String?
+  composicoes      composicoes      @relation(fields: [composicao_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itens_referencia itens_referencia @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base    revisoes_base    @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([revisao_base_id, item_id])
+  @@index([composicao_id], map: "idx_composicoes_publicadas_comp")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cronograma {
+  revisao_id         String             @db.Uuid
+  etapa_id           String             @db.Uuid
+  mes                Int
+  percentual         Decimal            @db.Decimal(9, 4)
+  etapas             etapas             @relation(fields: [etapa_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  revisoes_orcamento revisoes_orcamento @relation(fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([etapa_id, mes])
+}
+
+model descricoes_item {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  item_id           String              @db.Uuid
+  descricao         String
+  unidade           String
+  hash              String
+  criado_em         DateTime            @default(now()) @db.Timestamptz(6)
+  itens_referencia  itens_referencia    @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  precos_referencia precos_referencia[]
+
+  @@unique([item_id, hash])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model etapas {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  revisao_id         String             @db.Uuid
+  pai_id             String?            @db.Uuid
+  ordem              Int
+  titulo             String
+  criado_em          DateTime           @default(now()) @db.Timestamptz(6)
+  cronograma         cronograma[]
+  etapas             etapas?            @relation("etapasToetapas", fields: [pai_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_etapas       etapas[]           @relation("etapasToetapas")
+  revisoes_orcamento revisoes_orcamento @relation(fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens_orcamento    itens_orcamento[]
+
+  @@index([revisao_id, pai_id, ordem], map: "idx_etapas_revisao")
+}
+
+model fechamento_insumos {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  revisao_id         String             @db.Uuid
+  item_orcamento_id  String             @db.Uuid
+  ordem              Int
+  nivel              Int
+  tipo_item          String
+  fonte_sigla        String
+  codigo             String
+  descricao          String
+  unidade            String
+  coeficiente        Decimal            @db.Decimal(30, 12)
+  custo_unitario     Decimal?           @db.Decimal(20, 6)
+  revisao_base_id    String?            @db.Uuid
+  regime_codigo      String?
+  itens_orcamento    itens_orcamento    @relation(fields: [item_orcamento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  revisoes_base      revisoes_base?     @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_orcamento revisoes_orcamento @relation(fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([revisao_id, item_orcamento_id, ordem], map: "idx_fechamento_revisao")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fontes {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla                    String                     @unique
+  nome                     String
+  criado_em                DateTime                   @default(now()) @db.Timestamptz(6)
+  bases_referencia         bases_referencia[]
+  itens_referencia         itens_referencia[]
+  lotes_importacao         lotes_importacao[]
+  revisoes_orcamento_bases revisoes_orcamento_bases[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model itens_orcamento {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  revisao_id          String               @db.Uuid
+  etapa_id            String               @db.Uuid
+  ordem               Int
+  tipo                String
+  item_referencia_id  String?              @db.Uuid
+  revisao_base_id     String?              @db.Uuid
+  regime_codigo       String?
+  composicao_id       String?              @db.Uuid
+  fonte_sigla         String
+  competencia         DateTime?            @db.Date
+  rotulo_revisao_base String?
+  codigo              String
+  descricao           String
+  unidade             String
+  custo_unitario      Decimal?             @db.Decimal(20, 6)
+  situacao_preco      String               @default("INFORMADO")
+  quantidade          Decimal              @default(0) @db.Decimal(20, 6)
+  bdi_aplicado_id     String?              @db.Uuid
+  bdi_percentual      Decimal              @default(0) @db.Decimal(12, 6)
+  preco_unitario      Decimal?             @db.Decimal(20, 2)
+  total               Decimal?             @db.Decimal(20, 2)
+  observacao          String?
+  criado_em           DateTime             @default(now()) @db.Timestamptz(6)
+  atualizado_em       DateTime             @default(now()) @db.Timestamptz(6)
+  fechamento_insumos  fechamento_insumos[]
+  bdi_aplicados       bdi_aplicados?       @relation(fields: [bdi_aplicado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  composicoes         composicoes?         @relation(fields: [composicao_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  etapas              etapas               @relation(fields: [etapa_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens_referencia    itens_referencia?    @relation(fields: [item_referencia_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  regimes             regimes?             @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base       revisoes_base?       @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_orcamento  revisoes_orcamento   @relation(fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([item_referencia_id], map: "idx_itens_orcamento_ref")
+  @@index([revisao_id, etapa_id, ordem], map: "idx_itens_orcamento_revisao")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model itens_referencia {
+  id                          String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonte_id                    String                   @db.Uuid
+  tipo                        String
+  codigo                      String
+  descricao                   String
+  unidade                     String
+  classe                      String?
+  grupo                       String?
+  regime_codigo               String?
+  codigo_composicao_vinculada String?
+  criado_por                  String?                  @db.Uuid
+  criado_em                   DateTime                 @default(now()) @db.Timestamptz(6)
+  atualizado_em               DateTime                 @default(now()) @db.Timestamptz(6)
+  composicao_itens            composicao_itens[]
+  composicoes                 composicoes[]
+  composicoes_publicadas      composicoes_publicadas[]
+  descricoes_item             descricoes_item[]
+  itens_orcamento             itens_orcamento[]
+  usuarios                    usuarios?                @relation(fields: [criado_por], references: [id], onUpdate: NoAction)
+  fontes                      fontes                   @relation(fields: [fonte_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  regimes                     regimes?                 @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  precos_referencia           precos_referencia[]
+
+  @@unique([fonte_id, tipo, codigo])
+  @@index([codigo], map: "idx_itens_codigo")
+  @@index([codigo(ops: raw("gin_trgm_ops"))], map: "idx_itens_codigo_trgm", type: Gin)
+  @@index([fonte_id, codigo], map: "idx_itens_fonte_codigo")
+  @@index([fonte_id, regime_codigo], map: "idx_itens_regime")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lotes_importacao {
+  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonte_id                  String                    @db.Uuid
+  uf                        String                    @db.Char(2)
+  competencia               DateTime                  @db.Date
+  regimes                   String[]
+  rotulo_revisao            String
+  adaptador                 String?
+  importador_versao         String
+  status                    String                    @default("RECEBIDO")
+  contagens                 Json                      @default("{}")
+  metadados                 Json                      @default("{}")
+  erro                      String?
+  duplicidade_justificativa String?
+  usuario_id                String?                   @db.Uuid
+  revisao_base_id           String?                   @db.Uuid
+  criado_em                 DateTime                  @default(now()) @db.Timestamptz(6)
+  analisado_em              DateTime?                 @db.Timestamptz(6)
+  concluido_em              DateTime?                 @db.Timestamptz(6)
+  arquivos_importacao       arquivos_importacao[]
+  revisao_base_criada       revisoes_base?            @relation("lotes_importacao_revisao_base_idTorevisoes_base", fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lote_revisao_base")
+  fontes                    fontes                    @relation(fields: [fonte_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios                  usuarios?                 @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+  revisoes_base_do_lote     revisoes_base[]           @relation("revisoes_base_lote_idTolotes_importacao")
+  verificacoes_importacao   verificacoes_importacao[]
+
+  @@index([fonte_id, uf, competencia], map: "idx_lotes_fonte_comp")
+  @@index([status, criado_em(sort: Desc)], map: "idx_lotes_status")
+}
+
+model manutencoes_sinapi {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  revisao_base_id String        @db.Uuid
+  referencia      DateTime?     @db.Date
+  tipo            String?
+  codigo          String?
+  descricao       String?
+  manutencao      String?
+  revisoes_base   revisoes_base @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([codigo], map: "idx_manutencoes_codigo")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model obras {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome          String
+  cliente       String?
+  municipio     String?
+  uf            String       @default("RJ") @db.Char(2)
+  endereco      String?
+  descricao     String?
+  criado_por    String?      @db.Uuid
+  criado_em     DateTime     @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime     @default(now()) @db.Timestamptz(6)
+  usuarios      usuarios?    @relation(fields: [criado_por], references: [id], onUpdate: NoAction)
+  orcamentos    orcamentos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orcamentos {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  obra_id            String               @db.Uuid
+  codigo             String?
+  nome               String
+  descricao          String?
+  criado_por         String?              @db.Uuid
+  criado_em          DateTime             @default(now()) @db.Timestamptz(6)
+  atualizado_em      DateTime             @default(now()) @db.Timestamptz(6)
+  usuarios           usuarios?            @relation(fields: [criado_por], references: [id], onUpdate: NoAction)
+  obras              obras                @relation(fields: [obra_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_orcamento revisoes_orcamento[]
+
+  @@index([obra_id], map: "idx_orcamentos_obra")
+}
+
+model papeis {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo            String              @unique
+  nome              String
+  descricao         String?
+  papeis_permissoes papeis_permissoes[]
+  usuarios_papeis   usuarios_papeis[]
+}
+
+model papeis_permissoes {
+  papel_id     String     @db.Uuid
+  permissao_id String     @db.Uuid
+  papeis       papeis     @relation(fields: [papel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permissoes   permissoes @relation(fields: [permissao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([papel_id, permissao_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model parcelas_bdi {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfil_id  String     @db.Uuid
+  codigo     String
+  nome       String
+  percentual Decimal    @db.Decimal(12, 6)
+  ordem      Int        @default(0)
+  perfis_bdi perfis_bdi @relation(fields: [perfil_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([perfil_id, codigo])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model perfis_bdi {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome               String          @unique
+  descricao          String?
+  tipo_obra          String?
+  regime_codigo      String?
+  faixa              String?
+  percentual_adotado Decimal?        @db.Decimal(12, 6)
+  fonte_documento    String?
+  ativo              Boolean         @default(true)
+  criado_por         String?         @db.Uuid
+  criado_em          DateTime        @default(now()) @db.Timestamptz(6)
+  atualizado_em      DateTime        @default(now()) @db.Timestamptz(6)
+  bdi_aplicados      bdi_aplicados[]
+  parcelas_bdi       parcelas_bdi[]
+  usuarios           usuarios?       @relation(fields: [criado_por], references: [id], onUpdate: NoAction)
+  regimes            regimes?        @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model permissoes {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo            String              @unique
+  descricao         String
+  papeis_permissoes papeis_permissoes[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model precos_referencia {
+  revisao_base_id     String           @db.Uuid
+  regime_codigo       String
+  item_id             String           @db.Uuid
+  descricao_id        String           @db.Uuid
+  preco               Decimal?         @db.Decimal(20, 6)
+  situacao            String
+  origem_preco        String?
+  percentual_as       Decimal?         @db.Decimal(12, 8)
+  percentual_mao_obra Decimal?         @db.Decimal(12, 8)
+  linha_origem        Int?
+  descricoes_item     descricoes_item  @relation(fields: [descricao_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itens_referencia    itens_referencia @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  regimes             regimes          @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base       revisoes_base    @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([revisao_base_id, regime_codigo, item_id])
+  @@index([item_id, revisao_base_id], map: "idx_precos_item")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model regimes {
+  codigo                   String                     @id
+  nome                     String
+  ordem                    Int                        @default(0)
+  composicao_itens         composicao_itens[]
+  itens_orcamento          itens_orcamento[]
+  itens_referencia         itens_referencia[]
+  perfis_bdi               perfis_bdi[]
+  precos_referencia        precos_referencia[]
+  revisoes_orcamento_bases revisoes_orcamento_bases[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model revisoes_base {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  base_id                  String                     @db.Uuid
+  numero                   Int
+  rotulo                   String
+  status                   String                     @default("VALIDADA")
+  regimes                  String[]
+  data_emissao             DateTime?                  @db.Date
+  observacoes              String?
+  lote_id                  String?                    @db.Uuid
+  criada_em                DateTime                   @default(now()) @db.Timestamptz(6)
+  publicada_em             DateTime?                  @db.Timestamptz(6)
+  publicada_por            String?                    @db.Uuid
+  rejeitada_em             DateTime?                  @db.Timestamptz(6)
+  motivo_rejeicao          String?
+  substituida_em           DateTime?                  @db.Timestamptz(6)
+  composicao_itens         composicao_itens[]
+  composicoes              composicoes[]
+  composicoes_publicadas   composicoes_publicadas[]
+  fechamento_insumos       fechamento_insumos[]
+  itens_orcamento          itens_orcamento[]
+  lotes_que_criaram        lotes_importacao[]         @relation("lotes_importacao_revisao_base_idTorevisoes_base")
+  manutencoes_sinapi       manutencoes_sinapi[]
+  precos_referencia        precos_referencia[]
+  bases_referencia         bases_referencia           @relation(fields: [base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lote                     lotes_importacao?          @relation("revisoes_base_lote_idTolotes_importacao", fields: [lote_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios                 usuarios?                  @relation(fields: [publicada_por], references: [id], onUpdate: NoAction)
+  revisoes_orcamento_bases revisoes_orcamento_bases[]
+
+  @@unique([base_id, numero])
+  @@index([status], map: "idx_revisoes_base_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model revisoes_orcamento {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orcamento_id             String                     @db.Uuid
+  numero                   Int
+  status                   String                     @default("ABERTA")
+  descricao                String?
+  versao                   Int                        @default(1)
+  modo_arredondamento      String                     @default("TRUNCAR")
+  prazo_meses              Int?
+  revisao_origem_id        String?                    @db.Uuid
+  bdi_padrao_id            String?                    @db.Uuid
+  total_custo              Decimal?                   @db.Decimal(20, 2)
+  total_bdi                Decimal?                   @db.Decimal(20, 2)
+  total_geral              Decimal?                   @db.Decimal(20, 2)
+  fechada_em               DateTime?                  @db.Timestamptz(6)
+  fechada_por              String?                    @db.Uuid
+  hash_fechamento          String?
+  criado_por               String?                    @db.Uuid
+  criado_em                DateTime                   @default(now()) @db.Timestamptz(6)
+  atualizado_em            DateTime                   @default(now()) @db.Timestamptz(6)
+  bdis_aplicados           bdi_aplicados[]            @relation("bdi_aplicados_revisao_idTorevisoes_orcamento")
+  cronograma               cronograma[]
+  etapas                   etapas[]
+  fechamento_insumos       fechamento_insumos[]
+  itens_orcamento          itens_orcamento[]
+  bdi_padrao               bdi_aplicados?             @relation("revisoes_orcamento_bdi_padrao_idTobdi_aplicados", fields: [bdi_padrao_id], references: [id], onUpdate: NoAction, map: "fk_revisao_bdi_padrao")
+  criador                  usuarios?                  @relation("revisoes_orcamento_criado_porTousuarios", fields: [criado_por], references: [id], onUpdate: NoAction)
+  fechador                 usuarios?                  @relation("revisoes_orcamento_fechada_porTousuarios", fields: [fechada_por], references: [id], onUpdate: NoAction)
+  orcamentos               orcamentos                 @relation(fields: [orcamento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_orcamento       revisoes_orcamento?        @relation("revisoes_orcamentoTorevisoes_orcamento", fields: [revisao_origem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_revisoes_orcamento revisoes_orcamento[]       @relation("revisoes_orcamentoTorevisoes_orcamento")
+  revisoes_orcamento_bases revisoes_orcamento_bases[]
+
+  @@unique([orcamento_id, numero])
+}
+
+model revisoes_orcamento_bases {
+  revisao_id         String             @db.Uuid
+  fonte_id           String             @db.Uuid
+  revisao_base_id    String             @db.Uuid
+  regime_codigo      String
+  fontes             fontes             @relation(fields: [fonte_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  regimes            regimes            @relation(fields: [regime_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_base      revisoes_base      @relation(fields: [revisao_base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisoes_orcamento revisoes_orcamento @relation(fields: [revisao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([revisao_id, fonte_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sessoes {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id    String   @db.Uuid
+  token_hash    String   @unique
+  criado_em     DateTime @default(now()) @db.Timestamptz(6)
+  expira_em     DateTime @db.Timestamptz(6)
+  ultimo_uso_em DateTime @default(now()) @db.Timestamptz(6)
+  ip            String?
+  user_agent    String?
+  usuarios      usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expira_em], map: "idx_sessoes_expira")
+  @@index([usuario_id], map: "idx_sessoes_usuario")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_componentes {
+  lote_id           String   @db.Uuid
+  arquivo           String
+  linha             Int
+  codigo_pai        String
+  ordem             Int
+  sequencia         String?
+  tipo_item         String
+  codigo_item       String
+  coeficiente       Decimal? @db.Decimal(24, 10)
+  coeficiente_texto String?
+  percentual_perda  Decimal? @db.Decimal(12, 8)
+  situacao_origem   String?
+
+  @@index([lote_id, codigo_pai], map: "idx_stg_componentes_lote")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_composicoes {
+  lote_id  String  @db.Uuid
+  arquivo  String
+  linha    Int
+  codigo   String
+  situacao String?
+
+  @@index([lote_id, codigo], map: "idx_stg_composicoes_lote")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_itens {
+  lote_id                     String  @db.Uuid
+  arquivo                     String
+  linha                       Int
+  tipo                        String
+  codigo                      String
+  descricao                   String?
+  unidade                     String?
+  classe                      String?
+  grupo                       String?
+  regime_codigo               String?
+  codigo_composicao_vinculada String?
+
+  @@index([lote_id, tipo, codigo], map: "idx_stg_itens_lote")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_manutencoes {
+  lote_id    String    @db.Uuid
+  linha      Int
+  referencia DateTime? @db.Date
+  tipo       String?
+  codigo     String?
+  descricao  String?
+  manutencao String?
+
+  @@index([lote_id], map: "idx_stg_manutencoes_lote")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model stg_precos {
+  lote_id             String   @db.Uuid
+  arquivo             String
+  linha               Int
+  regime_codigo       String
+  tipo                String
+  codigo              String
+  preco_texto         String?
+  preco               Decimal? @db.Decimal(20, 6)
+  situacao            String
+  origem_preco        String?
+  percentual_as       Decimal? @db.Decimal(12, 8)
+  percentual_mao_obra Decimal? @db.Decimal(12, 8)
+
+  @@index([lote_id, tipo, codigo], map: "idx_stg_precos_lote")
+  @@ignore
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuarios {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome              String
+  email             String               @unique
+  senha_hash        String
+  ativo             Boolean              @default(true)
+  tentativas_falhas Int                  @default(0)
+  bloqueado_ate     DateTime?            @db.Timestamptz(6)
+  ultimo_login_em   DateTime?            @db.Timestamptz(6)
+  senha_alterada_em DateTime             @default(now()) @db.Timestamptz(6)
+  criado_em         DateTime             @default(now()) @db.Timestamptz(6)
+  auditoria         auditoria[]
+  composicoes       composicoes[]
+  itens_referencia  itens_referencia[]
+  lotes_importacao  lotes_importacao[]
+  obras             obras[]
+  orcamentos        orcamentos[]
+  perfis_bdi        perfis_bdi[]
+  revisoes_base     revisoes_base[]
+  revisoes_criadas  revisoes_orcamento[] @relation("revisoes_orcamento_criado_porTousuarios")
+  revisoes_fechadas revisoes_orcamento[] @relation("revisoes_orcamento_fechada_porTousuarios")
+  sessoes           sessoes[]
+  usuarios_papeis   usuarios_papeis[]
+}
+
+model usuarios_papeis {
+  usuario_id String   @db.Uuid
+  papel_id   String   @db.Uuid
+  papeis     papeis   @relation(fields: [papel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([usuario_id, papel_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model verificacoes_importacao {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lote_id          String           @db.Uuid
+  regra            String
+  severidade       String
+  mensagem         String
+  arquivo          String?
+  linha            Int?
+  codigo           String?
+  detalhes         Json?
+  criado_em        DateTime         @default(now()) @db.Timestamptz(6)
+  lotes_importacao lotes_importacao @relation(fields: [lote_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lote_id, severidade], map: "idx_verificacoes_lote")
+}
