@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marca-50: #eef6ff;
+  --color-marca-100: #d9eaff;
+  --color-marca-600: #1d5fa8;
+  --color-marca-700: #174c87;
+  --color-marca-800: #123b69;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body { @apply bg-slate-50 text-slate-900 antialiased; }
+
+@utility btn { @apply inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;  }
+@utility btn-primario { @apply btn bg-marca-600 text-white hover:bg-marca-700;  }
+@utility btn-secundario { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-100;  }
+@utility btn-perigo { @apply btn bg-red-600 text-white hover:bg-red-700;  }
+@utility btn-link { @apply text-marca-600 hover:underline;  }
+@utility campo { @apply block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm shadow-sm focus:border-marca-600 focus:outline-none focus:ring-1 focus:ring-marca-600;  }
+@utility rotulo { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600;  }
+@utility cartao { @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm;  }
+@utility titulo-pagina { @apply text-xl font-semibold text-slate-800;  }
+@utility tabela { @apply w-full border-collapse text-sm;  }
+.tabela th { @apply border-b border-slate-200 bg-slate-100 px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600;  }
+.tabela td { @apply border-b border-slate-100 px-2 py-1.5 align-top;  }
+.tabela tr:hover td { @apply bg-slate-50;  }
+@utility num { @apply text-right tabular-nums whitespace-nowrap;  }
+@utility etiqueta { @apply inline-block rounded px-1.5 py-0.5 text-xs font-medium;  }
+@utility alerta-erro { @apply rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800;  }
+@utility alerta-aviso { @apply rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900;  }
+@utility alerta-ok { @apply rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900;  }
+@utility alerta-info { @apply rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900;  }
